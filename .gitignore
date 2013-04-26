@@ -1,3 +1,7 @@
+.DS_Store
+jobs/
+dcor
+
 # Compiled Object files
 *.slo
 *.lo
