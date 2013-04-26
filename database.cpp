@@ -5,14 +5,10 @@
 
 static const std::string TABLE_NAME = "dcor_record";
 
-void close_conne(PGconn * conn) {
-    PQfinish(conn);
-    getchar();
-}
-
 PGconn* connect_db() {
     PGconn *conn = NULL;
-    conn = PQconnectdb("user=guillet password=hipercic dbname=hpcc_s13 host=shelob2.cs.stolaf.edu port=5432");
+    // Read from env. variables
+    conn = PQconnectdb("");
 
     if (PQstatus(conn) != CONNECTION_OK) {
         std::cout << "Connection to database failed.\n";
@@ -21,6 +17,11 @@ PGconn* connect_db() {
     std::cout << "Connection to database - OK\n";
 
     return conn;
+}
+
+void close_conne(PGconn * conn) {
+    PQfinish(conn);
+    getchar();
 }
 
 void create_params_table(PGconn *conn) {
@@ -40,7 +41,7 @@ void create_params_table(PGconn *conn) {
 void insert_asset_record(PGconn *conn, std::string asset_id, std::string date, std::string closed_price) {
     // Append the SQL statment
     std::string sSQL;
-    sSQL.append("INSERT INTO dcor_record (asset_id, date, closed_price) VALUES (");
+    sSQL.append("INSERT INTO " + TABLE_NAME  + " (asset_id, date, closed_price) VALUES (");
     sSQL.append(asset_id);
     sSQL.append(", '");
     sSQL.append(date);
