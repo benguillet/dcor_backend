@@ -38,51 +38,90 @@ void create_params_table(PGconn *conn) {
     PQclear(res);
 }
 
-void insert_asset_record(PGconn *conn, std::string asset_id, std::string date, std::string closed_price) {
-    // Append the SQL statment
+void insert_assets(PGconn *conn, std::vector< std::string > headers) {
     std::string sSQL;
-    sSQL.append("INSERT INTO " + TABLE_NAME  + " (asset_id, date, closed_price) VALUES (");
-    sSQL.append(asset_id);
-    sSQL.append(", '");
-    sSQL.append(date);
-    sSQL.append("', ");
-    sSQL.append(closed_price);
+    sSQL.append("INSERT INTO dcor_asset (name) VALUES (");
+    int n_headers = headers.size();
+    for (int i = 1; i < n_headers; ++i) {
+        sSQL.append("'" + headers[i] + "'");
+        if (i != n_headers - 1) {
+            sSQL.append(",");
+        }
+    }
     sSQL.append(");");
+    std::cout << sSQL << std::endl;
+    //Execute with sql statement
+    
+    PGresult *res = PQexec(conn, sSQL.c_str());
+    if (PQresultStatus(res) != PGRES_COMMAND_OK) {
+        std::cout << "Insert new assets failed" << std::endl;
+        std::cout << PQerrorMessage(conn) << std::endl; 
+    }
+    else {
+        std::cout << "Insert new assets -  OK\n";
+    }
+    PQclear(res);
+}
 
-    //std::cout << sSQL << std::endl;
+
+void insert_asset_record(PGconn *conn, std::string asset_name, std::string date, std::string closed_price) {
+    std::string sSQL;
+    sSQL.append("INSERT INTO " + TABLE_NAME  + " (asset_id, date, closed_price) SELECT a.id, "); 
+    sSQL.append("'" + date + "'");
+    sSQL.append(", ");
+    sSQL.append(closed_price);    
+    sSQL.append(" FROM dcor_asset a WHERE a.name = '" + asset_name + "' LIMIT 1;");
+    std::cout << sSQL << std::endl;
+
     //Execute with sql statement
     PGresult *res = PQexec(conn, sSQL.c_str());
             
     if (PQresultStatus(res) != PGRES_COMMAND_OK) {
         std::cout << "Insert asset record failed\n";
-        PQclear(res);
-        close_conne(conn);
+        std::cout << PQerrorMessage(conn) << std::endl; 
     }
-    std::cout << "Insert asset record - OK\n";
+    else {
+        std::cout << "Insert asset record - OK\n";
+    }
     // Clear result
     PQclear(res);
 }
 
-void fill_tables(PGconn *conn) {
-    std::ifstream file("data/three_assets.csv");
+void fill_tables(PGconn *conn, char* file_path) {
+    std::ifstream file(file_path);
 
     std::string line;
-    std::string headers;
-    getline(file, headers);
+    std::string headers_line;
+    getline(file, headers_line);
+    std::vector<std::string> headers = split(headers_line, ',');
+    insert_assets(conn, headers);
     while (getline(file, line)) {
-        std::vector<std::string> str = split(line, ',');
-        insert_asset_record(conn, "4", str[0], str[1]);
-        insert_asset_record(conn, "5", str[0], str[2]);
-        insert_asset_record(conn, "6", str[0], str[3]);
+        std::vector<std::string> records = split(line, ',');
+        for (int i = 1; i < records.size(); ++i) {
+            insert_asset_record(conn, headers[i], records[0], records[i]);
+        }
     }
 }
 
-std::vector< std::vector<std::string> > fetch_data(PGconn *conn, std::vector<std::string> params) {
-    std::vector< std::vector<std::string> > data;
-    std::string sql = "DECLARE emprec CURSOR FOR SELECT r.date, a.name, r.closed_price FROM "+ TABLE_NAME + " r INNER JOIN dcor_asset a ON r.asset_id = a.id WHERE r.date BETWEEN '" + params[6]  + "' AND '" + params[1] + "' AND a.name IN ('" + params[2] + "', '" + params[0] + "');";
+std::map <std::string, std::vector<float> > fetch_data(PGconn *conn, std::vector<std::string> params) {
+    std::map <std::string, std::vector<float> > data;
+    std::vector<std::string> assets = split(params[2].c_str(), ',');
+    int nb_assets = assets.size();
     
+    std::string sql = "DECLARE emprec CURSOR FOR SELECT r.date, a.name, r.closed_price FROM "+ TABLE_NAME + " r INNER JOIN dcor_asset a ON r.asset_id = a.id WHERE r.date BETWEEN '" + params[0]  + "' AND '" + params[1] + "' AND a.name IN ("; 
+
+    for (int i = 0; i < nb_assets; ++i) {
+        sql += "'" + assets[i] + "'";
+        if (i != assets.size() - 1) {
+            sql += ",";
+        }
+    }
+    sql += ") ORDER BY r.date, CASE a.name";
+    for (int i = 0; i < nb_assets; ++i) {
+        sql += " when '" + assets[i] + "' then " + intToString(i + 1);
+    }
+    sql += " end;"; 
     std::cout << sql << std::endl; 
-    int n_fields;
     
     // Start a transaction block
     PGresult *res  = PQexec(conn, "BEGIN");
@@ -118,31 +157,11 @@ std::vector< std::vector<std::string> > fetch_data(PGconn *conn, std::vector<std
         close_conne(conn);
     }
 
-    n_fields = PQnfields(res);
-
-    //std::cout << "\nFetch record:";
-    //std::cout << "\n********************************************************************\n";
-    for (int i = 0; i < n_fields; ++i) {
-        //printf("%-30s", PQfname(res, i));
-        std::vector<std::string> temp_vector;
-        data.push_back(temp_vector);
-    }
-    //std::cout << "\n********************************************************************\n";
-
-    // Next, print out the asset price record for each row
-    std::string first_occur_date;
     for (int i = 0; i < PQntuples(res); ++i) {
-        first_occur_date = PQgetvalue(res, i, 0);
-        if ( (i != 0)  && (first_occur_date.compare(PQgetvalue(res, i - 1, 0)) == 0) ) { 
-            //std::cout << "row " << i << " was skipped" << std::endl;
-            continue;
-        }
-        else {
-            data[0].push_back(PQgetvalue(res, i, 0));
-            data[1].push_back(PQgetvalue(res, i, 2));
-            data[2].push_back(PQgetvalue(res, i+1, 2));
-            //std::cout << data[0].back() << "|" << data[1].back() << "|" << data[2].back() << std::endl;
-        }
+        //std::cout << PQgetvalue(res, i, 0) << "=>" << PQgetvalue(res, i, 1) << "|" << PQgetvalue(res, i, 2) << std::endl; 
+        std::string current_row_date = PQgetvalue(res, i, 0); 
+        data.insert( std::pair<std::string, std::vector<float> >(current_row_date, std::vector<float>()));
+        data[current_row_date].push_back(::atof(PQgetvalue(res, i, 2))); 
     }
 
     PQclear(res);
