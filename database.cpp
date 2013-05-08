@@ -161,7 +161,7 @@ std::map <std::string, std::vector<float> > fetch_data(PGconn *conn, std::vector
         //std::cout << PQgetvalue(res, i, 0) << "=>" << PQgetvalue(res, i, 1) << "|" << PQgetvalue(res, i, 2) << std::endl; 
         std::string current_row_date = PQgetvalue(res, i, 0); 
         data.insert( std::pair<std::string, std::vector<float> >(current_row_date, std::vector<float>()));
-        data[current_row_date].push_back(::atof(PQgetvalue(res, i, 2))); 
+        data[current_row_date].push_back(::atof(PQgetvalue(res, i, 2)));
     }
 
     PQclear(res);

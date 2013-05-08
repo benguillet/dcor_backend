@@ -24,7 +24,7 @@ int main(int argc, const char *argv[]) {
     print_data(data);
     //get_least_loss(params, data);
     //get_greatest_loss(params, data);
-    //get_right_combinaison(params, data);
+    get_right_combination(params, data);
         
     return 0;
 }
