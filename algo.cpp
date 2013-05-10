@@ -83,7 +83,7 @@ int find_index(std::string asset_name, std::vector<std::string> all_assets) {
     return -1;
 }
 
-float get_greatest_loss(std::vector< std::string > params, std::map<std::string, std::vector<float> > data, std::string asset_combination) {
+PortReturn get_greatest_loss(std::vector< std::string > params, std::map<std::string, std::vector<float> > data, std::string asset_combination) {
     std::vector<std::string> combi = split(asset_combination.c_str(), ',');
     std::vector<std::string> pers_string;
     std::vector<std::string> all_assets = split(params[2].c_str(), ',');
@@ -108,13 +108,11 @@ float get_greatest_loss(std::vector< std::string > params, std::map<std::string,
         }
     }
 
-
-    float worst_return = std::numeric_limits<float>::max();
-    std::string worst_start_date = "";
-    std::string worst_end_date   = "";
-     
-    std::map<std::string, std::vector<float> >::iterator data_end = data.end();
+    PortReturn worst_return(std::numeric_limits<float>::max());     
+    worst_return.combination = asset_combination;
+    //worst_return.percentages = 
     
+    std::map<std::string, std::vector<float> >::iterator data_end = data.end();
     for (std::map<std::string, std::vector<float> >::iterator index_start_date = data.begin(); index_start_date != data_end; ++index_start_date) {
         //std::cout << "values start_date:" << std::endl;
         std::vector<float> values_asset_start_date;
@@ -143,18 +141,18 @@ float get_greatest_loss(std::vector< std::string > params, std::map<std::string,
             }
             //std::cout << total_current_return << std::endl;
 
-            if (total_current_return < worst_return) {
+            if (total_current_return < worst_return.value) {
                 std::cout << "we have a worst return: " << total_current_return << std::endl;
-                worst_return = total_current_return;
-                worst_start_date = index_start_date->first;
-                worst_end_date = current_date->first;
+                worst_return.value = total_current_return;
+                worst_return.start_date  = index_start_date->first;
+                worst_return.end_date = current_date->first;
             }
         }
 
     } 
-    std::cout << "Worst return is " << worst_return;
-    std::cout << "% if you start on " << worst_start_date;
-    std::cout << " and stop on " << worst_end_date;
+    std::cout << "Worst return is " << worst_return.value;
+    std::cout << "% if you start on " << worst_return.start_date;
+    std::cout << " and stop on " << worst_return.end_date;
     std::cout << std::endl;
     return worst_return;
 }
@@ -192,6 +190,7 @@ void print_combinations() {
     }
 }
 
+
 void get_right_combination(std::vector< std::string > params, std::map <std::string, std::vector<float> > data) {
     std::vector<std::string> assets = split(params[2].c_str(), ',');
     
@@ -206,21 +205,21 @@ void get_right_combination(std::vector< std::string > params, std::map <std::str
     }
     make_combinations(assets, 0, portofolio_size);
     print_combinations();
-    float current_return = 0.0;
-    float best_return = -std::numeric_limits<float>::max();
-
+    
+    PortReturn best_return(-std::numeric_limits<float>::max());
     for (int i = 0; i < combinations.size(); ++i) {
         std::cout << "combi no " << i << ": " << combinations[i] << std::endl; 
-        current_return = get_greatest_loss(params, data, combinations[i]);
-        if (current_return > best_return) {
+        PortReturn current_return = get_greatest_loss(params, data, combinations[i]);
+        if (current_return.value > best_return.value) {
             best_return = current_return;
         }
     }
 
-    std::cout << "Best return is: " << best_return;
-    std::cout << "% if you start on ";
-    std::cout << " and stop on ";
-    std::cout << " with this combination of assets: ";
-    std::cout << " and this percentages (respectively): " << std::endl;
+    std::cout << "Best return is: " << best_return.value;
+    std::cout << "% if you start on " << best_return.start_date;
+    std::cout << " and stop on " << best_return.end_date;
+    std::cout << " with this combination of assets: " << best_return.combination;
+    std::cout << " and this percentages (respectively): " << best_return.percentages;
+    std::cout << std::endl;
 } 
 
