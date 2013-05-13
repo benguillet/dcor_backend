@@ -1,5 +1,5 @@
 #include "database.h"
-#include "csv.h"
+#include "utils.h"
 #include <iostream>
 #include <fstream>
 
@@ -8,14 +8,16 @@ static const std::string TABLE_NAME = "dcor_record";
 PGconn* connect_db() {
     PGconn *conn = NULL;
     // Read from env. variables
-    conn = PQconnectdb("");
-
+    //conn = PQconnectdb("");
+    // Have to hard code value because django can't read env. variables...
+    conn = PQconnectdb("user=guillet password=hipercic dbname=hpcc_s13 host=shelob2.cs.stolaf.edu port=5432");//
     if (PQstatus(conn) != CONNECTION_OK) {
         std::cout << "Connection to database failed.\n";
         close_conne(conn);
     }
-    std::cout << "Connection to database - OK\n";
-
+    if (DEBUG) {
+        std::cout << "Connection to database - OK\n";
+    }
     return conn;
 }
 
@@ -38,27 +40,21 @@ void create_params_table(PGconn *conn) {
     PQclear(res);
 }
 
-void insert_assets(PGconn *conn, std::vector< std::string > headers) {
+void insert_asset(PGconn *conn, std::string asset_name) {
     std::string sSQL;
     sSQL.append("INSERT INTO dcor_asset (name) VALUES (");
-    int n_headers = headers.size();
-    for (int i = 1; i < n_headers; ++i) {
-        sSQL.append("'" + headers[i] + "'");
-        if (i != n_headers - 1) {
-            sSQL.append(",");
-        }
-    }
+    sSQL.append("'" + asset_name + "'");
     sSQL.append(");");
     std::cout << sSQL << std::endl;
+
     //Execute with sql statement
-    
     PGresult *res = PQexec(conn, sSQL.c_str());
     if (PQresultStatus(res) != PGRES_COMMAND_OK) {
-        std::cout << "Insert new assets failed" << std::endl;
+        std::cout << "Insert new asset failed" << std::endl;
         std::cout << PQerrorMessage(conn) << std::endl; 
     }
     else {
-        std::cout << "Insert new assets -  OK\n";
+        std::cout << "Insert new asset -  OK\n";
     }
     PQclear(res);
 }
@@ -94,7 +90,10 @@ void fill_tables(PGconn *conn, char* file_path) {
     std::string headers_line;
     getline(file, headers_line);
     std::vector<std::string> headers = split(headers_line, ',');
-    insert_assets(conn, headers);
+    int n_headers = headers.size();
+    for (int i = 1; i < n_headers; ++i) {
+        insert_asset(conn, headers[i]);
+    }
     while (getline(file, line)) {
         std::vector<std::string> records = split(line, ',');
         for (int i = 1; i < records.size(); ++i) {
@@ -121,8 +120,10 @@ std::map <std::string, std::vector<float> > fetch_data(PGconn *conn, std::vector
         sql += " when '" + assets[i] + "' then " + intToString(i + 1);
     }
     sql += " end;"; 
-    std::cout << sql << std::endl; 
     
+    if (DEBUG) {
+        std::cout << sql << std::endl; 
+    }
     // Start a transaction block
     PGresult *res  = PQexec(conn, "BEGIN");
 
