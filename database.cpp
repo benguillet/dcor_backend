@@ -10,10 +10,10 @@ static const std::string TABLE_NAME = "dcor_record";
 
 PGconn* connect_db() {
     PGconn *conn = NULL;
+    
     // Read from env. variables
-    //conn = PQconnectdb("");
-    // Have to hard code value because django can't read env. variables...
-    conn = PQconnectdb("user=guillet password=hipercic dbname=hpcc_s13 host=shelob2.cs.stolaf.edu port=5432");//
+    conn = PQconnectdb("");
+
     if (PQstatus(conn) != CONNECTION_OK) {
         std::cout << "Connection to database failed.\n";
         close_conne(conn);
