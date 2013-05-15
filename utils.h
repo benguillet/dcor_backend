@@ -4,6 +4,7 @@
 #include <vector>
 #include <string>
 
+// Change this value to false to disable verbose mode
 const bool DEBUG = true;
 
 std::string intToString(int number);

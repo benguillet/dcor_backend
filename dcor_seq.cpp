@@ -1,3 +1,6 @@
+/* author: Benjamin Guillet <benjamin.guillet@gmail.com>
+Lost in the code? Any questions? Shout me an email. */
+
 #include "database.h"
 #include "utils.h"
 #include "algo.h"

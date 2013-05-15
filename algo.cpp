@@ -1,3 +1,6 @@
+/* author: Benjamin Guillet <benjamin.guillet@gmail.com>
+Lost in the code? Any questions? Shout me an email. */
+
 #include "algo.h"
 
 std::vector< std::string > fill_params_array(std::ifstream* param_file) {
@@ -190,7 +193,7 @@ std::string get_portfolio_distribution(std::map<std::string, std::vector<float> 
     for (int perc1 = 0, perc2 = 100; perc1 <= 100; perc1 += 5, perc2 = (100 - perc1)) {
         std::string percentages = intToString(perc1) + "," + intToString(perc2);
         current_return = get_greatest_loss(data, all_assets, combination, portfolio_size, percentages);
-        portfolio_distribution += floatToString(current_return.value);
+        portfolio_distribution += floatToString(0 - current_return.value);
         if (perc1 < 100) {
             portfolio_distribution += ",";
         }
